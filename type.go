@@ -13,10 +13,11 @@ type Cache interface {
 }
 
 // SkipList for skl interface
+// TODO extend key type when go supports generic
 type SkipList interface {
-	Add(key Key, value interface{})
-	Get(key Key) (value interface{}, ok bool)
-	Remove(key Key)
+	Add(key int64, value interface{})
+	Get(key int64) (value interface{}, ok bool)
+	Remove(key int64)
 	Head() (value interface{}, ok bool)
 	Tail() (value interface{}, ok bool)
 }

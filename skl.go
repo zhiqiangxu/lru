@@ -8,15 +8,15 @@ func NewSkipList() SkipList {
 	return &skl{}
 }
 
-func (s *skl) Add(key Key, value interface{}) {
+func (s *skl) Add(key int64, value interface{}) {
 
 }
 
-func (s *skl) Get(key Key) (value interface{}, ok bool) {
+func (s *skl) Get(key int64) (value interface{}, ok bool) {
 	return
 }
 
-func (s *skl) Remove(key Key) {
+func (s *skl) Remove(key int64) {
 
 }
 
