@@ -2,10 +2,12 @@ package lru
 
 import (
 	"container/list"
+	"sync"
 	"time"
 )
 
 type cache struct {
+	rwLock     sync.RWMutex
 	maxEntries int
 	onEvicted  func(key Key, value interface{})
 	ll         *list.List
@@ -39,6 +41,9 @@ func (c *cache) Add(key Key, value interface{}, expireSeconds int) {
 		c.Remove(key)
 		return
 	}
+
+	c.rwLock.Lock()
+	defer c.rwLock.Unlock()
 
 	var oldTimeoutTS, timeoutTS int64
 	if expireSeconds > 0 {
@@ -74,6 +79,9 @@ func (c *cache) Add(key Key, value interface{}, expireSeconds int) {
 }
 
 func (c *cache) Get(key Key) (value interface{}, ok bool) {
+	c.rwLock.RLock()
+	defer c.rwLock.RUnlock()
+
 	if ele, hit := c.cache[key]; hit {
 		timeoutTS := ele.Value.(*entry).timeoutTS
 		if timeoutTS == 0 {
@@ -89,10 +97,16 @@ func (c *cache) Get(key Key) (value interface{}, ok bool) {
 }
 
 func (c *cache) Len() int {
+	c.rwLock.RLock()
+	defer c.rwLock.RUnlock()
+
 	return c.ll.Len()
 }
 
 func (c *cache) Remove(key Key) {
+	c.rwLock.Lock()
+	defer c.rwLock.Unlock()
+
 	if ele, hit := c.cache[key]; hit {
 		c.removeElement(ele)
 	}
