@@ -9,7 +9,7 @@ import (
 
 func TestLRUCache(t *testing.T) {
 
-	// no active gc
+	// without active gc
 	c := NewCache(100, 0, nil)
 	c.Add("k1", "v1", 0)
 	assert.Assert(t, c.Len() == 1)
@@ -19,7 +19,7 @@ func TestLRUCache(t *testing.T) {
 	_, ok := c.Get("k2")
 	assert.Assert(t, !ok && c.Len() == 2)
 
-	// active gc every second
+	// with active gc every second
 	c = NewCache(100, 1, nil)
 	c.Add("k1", "v1", 0)
 	assert.Assert(t, c.Len() == 1)
@@ -28,4 +28,17 @@ func TestLRUCache(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	_, ok = c.Get("k2")
 	assert.Assert(t, !ok && c.Len() == 1)
+
+	// test cap
+	c = NewCache(2, 1, nil)
+	c.Add("k1", "v1", 0)
+	assert.Assert(t, c.Len() == 1)
+	c.Add("k2", "v2", 0)
+	assert.Assert(t, c.Len() == 2)
+	c.Add("k3", "v3", 0)
+	assert.Assert(t, c.Len() == 2)
+	_, ok = c.Get("k1")
+	assert.Assert(t, !ok && c.Len() == 2)
+	_, ok = c.Get("k2")
+	assert.Assert(t, ok)
 }
