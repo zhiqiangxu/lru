@@ -7,12 +7,13 @@ import (
 )
 
 type cache struct {
-	rwLock     sync.RWMutex
-	maxEntries int
-	onEvicted  func(key Key, value interface{})
-	ll         *list.List
-	cache      map[interface{}]*list.Element
-	toExpire   SkipList
+	rwLock           sync.RWMutex
+	maxEntries       int
+	gcIntervalSecond int
+	onEvicted        func(key Key, value interface{})
+	ll               *list.List
+	cache            map[interface{}]*list.Element
+	toExpire         SkipList
 }
 
 type entry struct {
@@ -25,13 +26,53 @@ type sklEntry struct {
 }
 
 // NewCache creates a new Cache
-func NewCache(maxEntries int, onEvicted func(key Key, value interface{})) Cache {
-	return &cache{
-		maxEntries: maxEntries,
-		onEvicted:  onEvicted,
-		ll:         list.New(),
-		cache:      make(map[interface{}]*list.Element),
-		toExpire:   NewSkipList()}
+func NewCache(maxEntries, gcIntervalSecond int, onEvicted func(key Key, value interface{})) Cache {
+	c := &cache{
+		maxEntries:       maxEntries,
+		gcIntervalSecond: gcIntervalSecond,
+		onEvicted:        onEvicted,
+		ll:               list.New(),
+		cache:            make(map[interface{}]*list.Element),
+		toExpire:         NewSkipList()}
+
+	if gcIntervalSecond > 0 {
+		go c.gc()
+	}
+	return c
+}
+
+func (c *cache) gc() {
+	ticker := time.NewTimer(time.Duration(c.gcIntervalSecond) * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			nowSecond := time.Now().Unix()
+			c.rwLock.RLock()
+			timeoutTS, expireValues, ok := c.toExpire.Head()
+			if !ok || timeoutTS > nowSecond {
+				c.rwLock.RUnlock()
+				break
+			}
+			c.rwLock.RUnlock()
+			c.rwLock.Lock()
+			for {
+				timeoutTS, expireValues, ok = c.toExpire.Head()
+				if !ok || timeoutTS > nowSecond {
+					break
+				}
+				for key := range expireValues.(map[interface{}]struct{}) {
+					if ele, hit := c.cache[key]; hit {
+						c.removeElement(ele)
+					} else {
+						c.rwLock.Unlock()
+						panic("bug in cache3")
+					}
+
+				}
+			}
+			c.rwLock.Unlock()
+		}
+	}
 }
 
 func (c *cache) Add(key Key, value interface{}, expireSeconds int) {
@@ -59,7 +100,7 @@ func (c *cache) Add(key Key, value interface{}, expireSeconds int) {
 		ele := c.ll.PushFront(&entry{key, value, timeoutTS})
 		c.cache[key] = ele
 		if c.maxEntries != 0 && c.ll.Len() > c.maxEntries {
-			c.removeExpiredOrOldest()
+			c.remove1ExpiredOrOldest()
 		}
 	}
 
@@ -112,9 +153,9 @@ func (c *cache) Remove(key Key) {
 	}
 }
 
-func (c *cache) removeExpiredOrOldest() {
-	expireValues, ok := c.toExpire.Head()
-	if !ok {
+func (c *cache) remove1ExpiredOrOldest() {
+	timeoutTS, expireValues, ok := c.toExpire.Head()
+	if !ok || timeoutTS > time.Now().Unix() {
 		ele := c.ll.Back()
 		if ele != nil {
 			c.removeElement(ele)

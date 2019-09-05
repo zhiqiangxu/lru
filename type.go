@@ -18,5 +18,5 @@ type SkipList interface {
 	Add(key int64, value interface{})
 	Get(key int64) (value interface{}, ok bool)
 	Remove(key int64)
-	Head() (value interface{}, ok bool)
+	Head() (key int64, value interface{}, ok bool)
 }

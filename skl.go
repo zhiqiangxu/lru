@@ -139,8 +139,9 @@ func (s *skl) Remove(key int64) {
 	}
 }
 
-func (s *skl) Head() (value interface{}, ok bool) {
+func (s *skl) Head() (key int64, value interface{}, ok bool) {
 	if s.next[0] != nil {
+		key = s.next[0].key
 		value = s.next[0].value
 		ok = true
 	}
