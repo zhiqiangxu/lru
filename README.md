@@ -22,9 +22,9 @@ func TestLRUCache(t *testing.T) {
 		100/*最多保存的记录数*/, 
 		0/*主动GC的周期，单位秒，0表示不主动GC，到达上限后以一进一出的方式进行淘汰*/, 
 		nil/*淘汰时的回调函数，不需要填nil*/)
-	c.Add("k1", "v1", 0)
+	c.Add("k1", "v1", 0/*没有过期时间*/)
 	assert.Assert(t, c.Len() == 1)
-	c.Add("k2", "v2", 1)
+	c.Add("k2", "v2", 1/*1秒钟后过期*/)
 	assert.Assert(t, c.Len() == 2)
 	time.Sleep(time.Second * 2)
 	_, ok := c.Get("k2")
