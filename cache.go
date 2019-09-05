@@ -24,8 +24,8 @@ type entry struct {
 type sklEntry struct {
 }
 
-// New creates a new Cache
-func New(maxEntries int, onEvicted func(key Key, value interface{})) Cache {
+// NewCache creates a new Cache
+func NewCache(maxEntries int, onEvicted func(key Key, value interface{})) Cache {
 	return &cache{
 		maxEntries: maxEntries,
 		onEvicted:  onEvicted,
