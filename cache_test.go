@@ -14,12 +14,16 @@ func TestLRUCache(t *testing.T) {
 	ret := c.Add("k1", "v1", 0)
 	assert.Assert(t, c.Len() == 1 && ret)
 	ret = c.Add("k1", "v1", 0)
-	assert.Assert(t, c.Len() == 1 && !ret)
+	assert.Assert(t, !ret)
 	c.Add("k2", "v2", 1)
 	assert.Assert(t, c.Len() == 2)
+	ret = c.Add("k2", "v2", 1)
+	assert.Assert(t, !ret)
 	time.Sleep(time.Second * 2)
 	_, ok := c.Get("k2")
 	assert.Assert(t, !ok && c.Len() == 2)
+	ret = c.Add("k2", "v2", 1)
+	assert.Assert(t, ret)
 
 	// with active gc every second
 	c = NewCache(100, 1, nil)
