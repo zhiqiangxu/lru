@@ -6,7 +6,7 @@ type Key interface{}
 // Cache for lru interface
 type Cache interface {
 	// expireSeconds 0 means never expire
-	Add(key Key, value interface{}, expireSeconds int)
+	Add(key Key, value interface{}, expireSeconds int) (new bool)
 	Get(key Key) (value interface{}, ok bool)
 	Remove(key Key)
 	Len() int

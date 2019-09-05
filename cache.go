@@ -75,28 +75,32 @@ func (c *cache) gc() {
 	}
 }
 
-func (c *cache) Add(key Key, value interface{}, expireSeconds int) {
+func (c *cache) Add(key Key, value interface{}, expireSeconds int) (new bool) {
 
 	// expireSeconds < 0
 	if expireSeconds < 0 {
-		c.Remove(key)
-		return
+		panic("expireSeconds < 0")
 	}
 
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
+	nowSeconds := time.Now().Unix()
 	var oldTimeoutTS, timeoutTS int64
 	if expireSeconds > 0 {
-		timeoutTS = int64(expireSeconds) + time.Now().Unix()
+		timeoutTS = int64(expireSeconds) + nowSeconds
 	}
 
 	if ee, ok := c.cache[key]; ok {
 		c.ll.MoveToFront(ee)
 		ee.Value.(*entry).value = value
 		oldTimeoutTS = ee.Value.(*entry).timeoutTS
+		if oldTimeoutTS > 0 && oldTimeoutTS < nowSeconds {
+			new = true
+		}
 		ee.Value.(*entry).timeoutTS = timeoutTS
 	} else {
+		new = true
 		ele := c.ll.PushFront(&entry{key, value, timeoutTS})
 		c.cache[key] = ele
 		if c.maxEntries != 0 && c.ll.Len() > c.maxEntries {
@@ -117,6 +121,7 @@ func (c *cache) Add(key Key, value interface{}, expireSeconds int) {
 	}
 
 	c.addKeyToExpire(key, timeoutTS)
+	return
 }
 
 func (c *cache) Get(key Key) (value interface{}, ok bool) {

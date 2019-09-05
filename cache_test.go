@@ -11,8 +11,10 @@ func TestLRUCache(t *testing.T) {
 
 	// without active gc
 	c := NewCache(100, 0, nil)
-	c.Add("k1", "v1", 0)
-	assert.Assert(t, c.Len() == 1)
+	ret := c.Add("k1", "v1", 0)
+	assert.Assert(t, c.Len() == 1 && ret)
+	ret = c.Add("k1", "v1", 0)
+	assert.Assert(t, c.Len() == 1 && !ret)
 	c.Add("k2", "v2", 1)
 	assert.Assert(t, c.Len() == 2)
 	time.Sleep(time.Second * 2)
