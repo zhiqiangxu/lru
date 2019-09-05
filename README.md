@@ -18,7 +18,7 @@ import (
 func TestLRUCache(t *testing.T) {
 
 	// without active gc
-	c := lru.NewCache(100, 0, nil)
+	c := lru.NewCache(100/*最多保存的记录数*/, 0/*主动GC的周期，单位秒，0表示不主动GC，到达上限后一进一出的方式进行淘汰*/, nil)
 	c.Add("k1", "v1", 0)
 	assert.Assert(t, c.Len() == 1)
 	c.Add("k2", "v2", 1)
