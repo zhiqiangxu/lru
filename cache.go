@@ -11,9 +11,9 @@ type cache struct {
 	maxEntries       int
 	gcIntervalSecond int
 	onEvicted        func(key Key, value interface{})
-	ll               *list.List
+	ll               *list.List //最新用到的key在头部，最久未用到的key在尾部
 	cache            map[interface{}]*list.Element
-	toExpire         SkipList
+	toExpire         SkipList //维护过期时间到key的映射
 }
 
 type entry struct {
@@ -161,12 +161,14 @@ func (c *cache) Remove(key Key) {
 func (c *cache) remove1ExpiredOrOldest() {
 	timeoutTS, expireValues, ok := c.toExpire.Head()
 	if !ok || timeoutTS > time.Now().Unix() {
+		// 没有过期的key，按LRU来淘汰
 		ele := c.ll.Back()
 		if ele != nil {
 			c.removeElement(ele)
 		}
 		return
 	}
+	// 有过期的key，按过期来淘汰
 	for key := range expireValues.(map[interface{}]struct{}) {
 		if ele, hit := c.cache[key]; hit {
 			c.removeElement(ele)
