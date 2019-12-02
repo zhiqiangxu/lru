@@ -50,9 +50,9 @@ func TestLRUCache(t *testing.T) {
 	// test CompareAndSet
 	c.CompareAndSet("k2", func(value interface{}, exists bool) {
 		assert.Assert(t, exists && value.(string) == "v2")
-		isNew := c.AddLocked("k2", "v2new", 0)
+		isNew := c.AddLocked("k2", 2, 0)
 		assert.Assert(t, !isNew)
 	})
 	v, ok := c.Get("k2")
-	assert.Assert(t, ok && v.(string) == "v2new")
+	assert.Assert(t, ok && v.(int) == 2)
 }
