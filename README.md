@@ -58,6 +58,8 @@ func TestLRUCache(t *testing.T) {
 	assert.Assert(t, !ok && c.Len() == 2)
 	_, ok = c.Get("k2")
 	assert.Assert(t, ok)
+
+	// 高阶方法 CompareAndSet example参见测试用例
 }
 
 ```
