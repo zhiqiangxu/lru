@@ -10,6 +10,12 @@ type Cache interface {
 	Get(key Key) (value interface{}, ok bool)
 	Remove(key Key)
 	Len() int
+	CompareAndSet(key Key, funcLocked func(value interface{}, exists bool))
+	// below are paired with CompareAndSet, use carefully
+	GetLocked(key Key) (value interface{}, ok bool)
+	AddLocked(key Key, value interface{}, expireSeconds int) (new bool)
+	RemoveLocked(key Key)
+	LenLocked() int
 }
 
 // SkipList for skl interface

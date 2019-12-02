@@ -77,13 +77,18 @@ func (c *cache) gc() {
 
 func (c *cache) Add(key Key, value interface{}, expireSeconds int) (new bool) {
 
+	c.rwLock.Lock()
+	defer c.rwLock.Unlock()
+
+	return c.AddLocked(key, value, expireSeconds)
+
+}
+
+func (c *cache) AddLocked(key Key, value interface{}, expireSeconds int) (new bool) {
 	// expireSeconds < 0
 	if expireSeconds < 0 {
 		panic("expireSeconds < 0")
 	}
-
-	c.rwLock.Lock()
-	defer c.rwLock.Unlock()
 
 	nowSeconds := time.Now().Unix()
 	var oldTimeoutTS, timeoutTS int64
@@ -121,13 +126,26 @@ func (c *cache) Add(key Key, value interface{}, expireSeconds int) (new bool) {
 	}
 
 	c.addKeyToExpire(key, timeoutTS)
+
 	return
+}
+
+func (c *cache) CompareAndSet(key Key, funcLocked func(value interface{}, exists bool)) {
+	c.rwLock.Lock()
+	defer c.rwLock.Unlock()
+
+	value, ok := c.GetLocked(key)
+	funcLocked(value, ok)
 }
 
 func (c *cache) Get(key Key) (value interface{}, ok bool) {
 	c.rwLock.RLock()
 	defer c.rwLock.RUnlock()
 
+	return c.GetLocked(key)
+}
+
+func (c *cache) GetLocked(key Key) (value interface{}, ok bool) {
 	if ele, hit := c.cache[key]; hit {
 		timeoutTS := ele.Value.(*entry).timeoutTS
 		if timeoutTS == 0 {
@@ -149,15 +167,22 @@ func (c *cache) Len() int {
 	return c.ll.Len()
 }
 
+func (c *cache) LenLocked() int {
+	return c.ll.Len()
+}
+
 func (c *cache) Remove(key Key) {
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
+	c.RemoveLocked(key)
+}
+
+func (c *cache) RemoveLocked(key Key) {
 	if ele, hit := c.cache[key]; hit {
 		c.removeElement(ele)
 	}
 }
-
 func (c *cache) remove1ExpiredOrOldest() {
 	timeoutTS, expireValues, ok := c.toExpire.Head()
 	if !ok || timeoutTS > time.Now().Unix() {
