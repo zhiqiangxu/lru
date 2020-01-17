@@ -17,6 +17,7 @@ type Cache interface {
 	AddLocked(key Key, value interface{}, expireSeconds int) (new bool)
 	RemoveLocked(key Key)
 	LenLocked() int
+	Close()
 }
 
 // SkipList for skl interface

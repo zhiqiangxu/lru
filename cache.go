@@ -4,12 +4,16 @@ import (
 	"container/list"
 	"sync"
 	"time"
+
+	"github.com/zhiqiangxu/util"
 )
 
 type cache struct {
 	rwLock           sync.RWMutex
+	wg               sync.WaitGroup
 	maxEntries       int
 	gcIntervalSecond int
+	closeCh          chan struct{}
 	onEvicted        func(key Key, value interface{})
 	ll               *list.List //最新用到的key在头部，最久未用到的key在尾部
 	cache            map[interface{}]*list.Element
@@ -30,13 +34,14 @@ func NewCache(maxEntries, gcIntervalSecond int, onEvicted func(key Key, value in
 	c := &cache{
 		maxEntries:       maxEntries,
 		gcIntervalSecond: gcIntervalSecond,
+		closeCh:          make(chan struct{}),
 		onEvicted:        onEvicted,
 		ll:               list.New(),
 		cache:            make(map[interface{}]*list.Element),
 		toExpire:         NewSkipList()}
 
 	if gcIntervalSecond > 0 {
-		go c.gc()
+		util.GoFunc(&c.wg, c.gc)
 	}
 	return c
 }
@@ -241,4 +246,10 @@ func (c *cache) addKeyToExpire(key Key, timeoutTS int64) {
 	if !ok {
 		c.toExpire.Add(timeoutTS, expireValues)
 	}
+}
+
+func (c *cache) Close() {
+	// the only thing it does now is to recycle gc goroutine if any
+	close(c.closeCh)
+	c.wg.Wait()
 }
