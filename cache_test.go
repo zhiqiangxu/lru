@@ -34,6 +34,7 @@ func TestLRUCache(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	_, ok = c.Get("k2")
 	assert.Assert(t, !ok && c.Len() == 1)
+	c.Close()
 
 	// test cap
 	c = NewCache(2, 1, nil)
