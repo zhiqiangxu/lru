@@ -76,6 +76,8 @@ func (c *cache) gc() {
 				}
 			}
 			c.rwLock.Unlock()
+		case <-c.closeCh:
+			return
 		}
 	}
 }
