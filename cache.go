@@ -26,10 +26,8 @@ type entry struct {
 	timeoutTS int64
 }
 
-type sklEntry struct {
-}
-
 // NewCache creates a new Cache
+// lock is holded when onEvicted is called
 func NewCache(maxEntries, gcIntervalSecond int, onEvicted func(key Key, value interface{})) Cache {
 	c := &cache{
 		maxEntries:       maxEntries,
