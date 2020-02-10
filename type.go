@@ -10,6 +10,10 @@ type Cache interface {
 	Get(key Key) (value interface{}, ok bool)
 	Remove(key Key)
 	Len() int
+	// 在funcLocked回调内只能调各种只读Locked方法
+	View(funcLocked func())
+	// 在funcLocked回调内只能调各种Locked方法，否则将死锁
+	Update(funcLocked func())
 	// 在funcLocked回调内只能调各种Locked方法，否则将死锁
 	CompareAndSet(key Key, funcLocked func(value interface{}, exists bool))
 	// below are paired with CompareAndSet, use carefully

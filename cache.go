@@ -135,6 +135,20 @@ func (c *cache) AddLocked(key Key, value interface{}, expireSeconds int) (new bo
 	return
 }
 
+func (c *cache) View(funcLocked func()) {
+	c.rwLock.RLock()
+	defer c.rwLock.RUnlock()
+
+	funcLocked()
+}
+
+func (c *cache) Update(funcLocked func()) {
+	c.rwLock.Lock()
+	defer c.rwLock.Unlock()
+
+	funcLocked()
+}
+
 func (c *cache) CompareAndSet(key Key, funcLocked func(value interface{}, exists bool)) {
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
