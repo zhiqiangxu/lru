@@ -228,6 +228,50 @@ func (c *cache) Remove(key Key) {
 	c.removeLocked(key)
 }
 
+func (c *cache) Range(funcLocked func(key Key, value interface{}, expireTime int64) bool) {
+	now := time.Now().Unix()
+
+	c.rwLock.RLock()
+	defer c.rwLock.RUnlock()
+
+	ele := c.ll.Front()
+	for {
+		if ele == nil {
+			break
+		}
+		ent := ele.Value.(*entry)
+		timeoutTS := ent.timeoutTS
+		if timeoutTS == 0 || timeoutTS > now {
+			if !funcLocked(ent.key, ent.value, ent.timeoutTS) {
+				return
+			}
+		}
+		ele = ele.Next()
+	}
+}
+
+func (c *cache) Reverse(funcLocked func(key Key, value interface{}, expireTime int64) bool) {
+	now := time.Now().Unix()
+
+	c.rwLock.RLock()
+	defer c.rwLock.RUnlock()
+
+	ele := c.ll.Back()
+	for {
+		if ele == nil {
+			break
+		}
+		ent := ele.Value.(*entry)
+		timeoutTS := ent.timeoutTS
+		if timeoutTS == 0 || timeoutTS > now {
+			if !funcLocked(ent.key, ent.value, ent.timeoutTS) {
+				return
+			}
+		}
+		ele = ele.Prev()
+	}
+}
+
 func (c *cache) removeLocked(key Key) {
 	if ele, hit := c.cache[key]; hit {
 		c.removeElement(ele)

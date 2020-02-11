@@ -14,6 +14,8 @@ type Cache interface {
 	View(funcLocked func(rt RTxn))
 	Update(funcLocked func(t Txn))
 	CompareAndSet(key Key, funcLocked func(value interface{}, exists bool, t Txn))
+	Range(funcLocked func(key Key, value interface{}, expireTime int64) bool)
+	Reverse(funcLocked func(key Key, value interface{}, expireTime int64) bool)
 
 	Close()
 }

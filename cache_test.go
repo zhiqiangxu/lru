@@ -1,6 +1,7 @@
 package lru
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -56,4 +57,41 @@ func TestLRUCache(t *testing.T) {
 	})
 	v, ok := c.Get("k2")
 	assert.Assert(t, ok && v.(int) == 2)
+
+	// test Range
+	m := map[interface{}]interface{}{1: 2, 3: 4, 5: 6}
+	c = NewCache(20, 1, nil)
+	var keys []Key
+	for k, v := range m {
+		keys = append(keys, k)
+		c.Add(k, v, 0)
+	}
+	resultMap := make(map[interface{}]interface{})
+	var resultKeys []Key
+	c.Range(func(k Key, v interface{}, exipreTime int64) bool {
+		resultMap[k] = v
+		resultKeys = append(resultKeys, k)
+		return true
+	})
+	assert.Assert(t, reflect.DeepEqual(m, resultMap))
+	reverseSlice := func(keys []Key) []Key {
+		result := make([]Key, len(keys))
+		for i := 0; i < len(keys); i++ {
+			result[i] = keys[len(keys)-1-i]
+		}
+		return result
+	}
+	assert.Assert(t, reflect.DeepEqual(keys, reverseSlice(resultKeys)))
+
+	// Test Reverse
+	resultMap = make(map[interface{}]interface{})
+	resultKeys = nil
+	c.Reverse(func(k Key, v interface{}, exipreTime int64) bool {
+		resultMap[k] = v
+		resultKeys = append(resultKeys, k)
+		return true
+	})
+	assert.Assert(t, reflect.DeepEqual(m, resultMap))
+	assert.Assert(t, reflect.DeepEqual(keys, resultKeys))
+
 }
