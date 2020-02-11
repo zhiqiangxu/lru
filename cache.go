@@ -30,31 +30,31 @@ type txn cache
 type rtxn cache
 
 func (t *txn) Add(key Key, value interface{}, expireSeconds int) (new bool) {
-	new = (*cache)(t).AddLocked(key, value, expireSeconds)
+	new = (*cache)(t).addLocked(key, value, expireSeconds)
 	return
 }
 
 func (t *txn) Get(key Key) (value interface{}, ok bool) {
-	value, ok = (*cache)(t).GetLocked(key)
+	value, ok = (*cache)(t).getLocked(key)
 	return
 }
 
 func (t *txn) Remove(key Key) {
-	(*cache)(t).RemoveLocked(key)
+	(*cache)(t).removeLocked(key)
 	return
 }
 
 func (t *txn) Len() int {
-	return (*cache)(t).LenLocked()
+	return (*cache)(t).lenLocked()
 }
 
 func (rt *rtxn) Get(key Key) (value interface{}, ok bool) {
-	value, ok = (*cache)(rt).GetLocked(key)
+	value, ok = (*cache)(rt).getLocked(key)
 	return
 }
 
 func (rt *rtxn) Len() int {
-	return (*cache)(rt).LenLocked()
+	return (*cache)(rt).lenLocked()
 }
 
 // NewCache creates a new Cache
@@ -116,11 +116,11 @@ func (c *cache) Add(key Key, value interface{}, expireSeconds int) (new bool) {
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
-	return c.AddLocked(key, value, expireSeconds)
+	return c.addLocked(key, value, expireSeconds)
 
 }
 
-func (c *cache) AddLocked(key Key, value interface{}, expireSeconds int) (new bool) {
+func (c *cache) addLocked(key Key, value interface{}, expireSeconds int) (new bool) {
 	// expireSeconds < 0
 	if expireSeconds < 0 {
 		panic("expireSeconds < 0")
@@ -184,7 +184,7 @@ func (c *cache) CompareAndSet(key Key, funcLocked func(value interface{}, exists
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
-	value, ok := c.GetLocked(key)
+	value, ok := c.getLocked(key)
 	funcLocked(value, ok, (*txn)(c))
 }
 
@@ -192,10 +192,10 @@ func (c *cache) Get(key Key) (value interface{}, ok bool) {
 	c.rwLock.RLock()
 	defer c.rwLock.RUnlock()
 
-	return c.GetLocked(key)
+	return c.getLocked(key)
 }
 
-func (c *cache) GetLocked(key Key) (value interface{}, ok bool) {
+func (c *cache) getLocked(key Key) (value interface{}, ok bool) {
 	if ele, hit := c.cache[key]; hit {
 		timeoutTS := ele.Value.(*entry).timeoutTS
 		if timeoutTS == 0 {
@@ -217,7 +217,7 @@ func (c *cache) Len() int {
 	return c.ll.Len()
 }
 
-func (c *cache) LenLocked() int {
+func (c *cache) lenLocked() int {
 	return c.ll.Len()
 }
 
@@ -225,10 +225,10 @@ func (c *cache) Remove(key Key) {
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
-	c.RemoveLocked(key)
+	c.removeLocked(key)
 }
 
-func (c *cache) RemoveLocked(key Key) {
+func (c *cache) removeLocked(key Key) {
 	if ele, hit := c.cache[key]; hit {
 		c.removeElement(ele)
 	}
