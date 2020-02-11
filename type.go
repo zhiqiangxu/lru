@@ -10,18 +10,26 @@ type Cache interface {
 	Get(key Key) (value interface{}, ok bool)
 	Remove(key Key)
 	Len() int
-	// 在funcLocked回调内只能调各种只读Locked方法
-	View(funcLocked func())
-	// 在funcLocked回调内只能调各种Locked方法，否则将死锁
-	Update(funcLocked func())
-	// 在funcLocked回调内只能调各种Locked方法，否则将死锁
-	CompareAndSet(key Key, funcLocked func(value interface{}, exists bool))
-	// below are paired with CompareAndSet, use carefully
-	GetLocked(key Key) (value interface{}, ok bool)
-	AddLocked(key Key, value interface{}, expireSeconds int) (new bool)
-	RemoveLocked(key Key)
-	LenLocked() int
+
+	View(funcLocked func(rt RTxn))
+	Update(funcLocked func(t Txn))
+	CompareAndSet(key Key, funcLocked func(value interface{}, exists bool, t Txn))
+
 	Close()
+}
+
+// Txn for read/write transaction
+type Txn interface {
+	Add(key Key, value interface{}, expireSeconds int) (new bool)
+	Get(key Key) (value interface{}, ok bool)
+	Remove(key Key)
+	Len() int
+}
+
+// RTxn for read only transaction
+type RTxn interface {
+	Get(key Key) (value interface{}, ok bool)
+	Len() int
 }
 
 // SkipList for skl interface

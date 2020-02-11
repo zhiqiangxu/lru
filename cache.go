@@ -26,6 +26,37 @@ type entry struct {
 	timeoutTS int64
 }
 
+type txn cache
+type rtxn cache
+
+func (t *txn) Add(key Key, value interface{}, expireSeconds int) (new bool) {
+	new = (*cache)(t).AddLocked(key, value, expireSeconds)
+	return
+}
+
+func (t *txn) Get(key Key) (value interface{}, ok bool) {
+	value, ok = (*cache)(t).GetLocked(key)
+	return
+}
+
+func (t *txn) Remove(key Key) {
+	(*cache)(t).RemoveLocked(key)
+	return
+}
+
+func (t *txn) Len() int {
+	return (*cache)(t).LenLocked()
+}
+
+func (rt *rtxn) Get(key Key) (value interface{}, ok bool) {
+	value, ok = (*cache)(rt).GetLocked(key)
+	return
+}
+
+func (rt *rtxn) Len() int {
+	return (*cache)(rt).LenLocked()
+}
+
 // NewCache creates a new Cache
 // lock is holded when onEvicted is called
 func NewCache(maxEntries, gcIntervalSecond int, onEvicted func(key Key, value interface{})) Cache {
@@ -135,26 +166,26 @@ func (c *cache) AddLocked(key Key, value interface{}, expireSeconds int) (new bo
 	return
 }
 
-func (c *cache) View(funcLocked func()) {
+func (c *cache) View(funcLocked func(rt RTxn)) {
 	c.rwLock.RLock()
 	defer c.rwLock.RUnlock()
 
-	funcLocked()
+	funcLocked((*rtxn)(c))
 }
 
-func (c *cache) Update(funcLocked func()) {
+func (c *cache) Update(funcLocked func(t Txn)) {
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
-	funcLocked()
+	funcLocked((*txn)(c))
 }
 
-func (c *cache) CompareAndSet(key Key, funcLocked func(value interface{}, exists bool)) {
+func (c *cache) CompareAndSet(key Key, funcLocked func(value interface{}, exists bool, t Txn)) {
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
 	value, ok := c.GetLocked(key)
-	funcLocked(value, ok)
+	funcLocked(value, ok, (*txn)(c))
 }
 
 func (c *cache) Get(key Key) (value interface{}, ok bool) {
