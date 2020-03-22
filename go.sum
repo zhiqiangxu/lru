@@ -66,6 +66,8 @@ github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81P
 github.com/zhiqiangxu/rpheap v0.0.0-20191222053847-9002d7e5a1a1/go.mod h1:aYy7SAJP4LY667NfqoMR/ZJAy8HQ8KVtQTvEDrGS5ks=
 github.com/zhiqiangxu/util v0.0.0-20200321115341-9fdd5898aef5 h1:ZPw+Yuww80OUhMcxqFGXw5mMnEYjgLjhq2UH61oImkI=
 github.com/zhiqiangxu/util v0.0.0-20200321115341-9fdd5898aef5/go.mod h1:pN5ZLB79khe9hSofw7Fe+ugdpnbRYw21nq9AqjtdT6Y=
+github.com/zhiqiangxu/util v0.0.0-20200322064413-5ed8e70312d9 h1:ZcroM/hAuS22wY9bpXmiy25Op+I5msa4HECUTCiPMe0=
+github.com/zhiqiangxu/util v0.0.0-20200322064413-5ed8e70312d9/go.mod h1:pN5ZLB79khe9hSofw7Fe+ugdpnbRYw21nq9AqjtdT6Y=
 go.uber.org/atomic v1.5.0 h1:OI5t8sDa1Or+q8AeE+yKeB/SDYioSHAgcVljj9JIETY=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
 go.uber.org/multierr v1.3.0 h1:sFPn2GLc3poCkfrpIXGhBD2X0CMIo4Q/zSULXrj/+uc=

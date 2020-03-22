@@ -94,40 +94,4 @@ func TestLRUCache(t *testing.T) {
 	assert.Assert(t, reflect.DeepEqual(m, resultMap))
 	assert.Assert(t, reflect.DeepEqual(keys, resultKeys))
 
-	{
-		// test SkipListIterator
-		skl := NewSkipList()
-		total := 10
-		for i := 0; i < total; i++ {
-			skl.Add(int64(i), i)
-		}
-
-		it := skl.NewIterator()
-		ok = it.First()
-		assert.Assert(t, ok)
-		for i := 0; i < total; i++ {
-			assert.Assert(t, it.Valid())
-			k, v := it.KeyValue()
-			assert.Assert(t, k == int64(i) && v == i)
-			if i == total-1 {
-				assert.Assert(t, !it.Next())
-			} else {
-				assert.Assert(t, it.Next())
-			}
-		}
-
-		ok = it.SeekGE(2)
-		assert.Assert(t, ok)
-		for i := 2; i < total; i++ {
-			assert.Assert(t, it.Valid())
-			k, v := it.KeyValue()
-			assert.Assert(t, k == int64(i) && v == i)
-			if i == total-1 {
-				assert.Assert(t, !it.Next())
-			} else {
-				assert.Assert(t, it.Next())
-			}
-		}
-	}
-
 }

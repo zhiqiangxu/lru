@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/zhiqiangxu/util"
+	"github.com/zhiqiangxu/util/skl"
 )
 
 type cache struct {
@@ -17,7 +18,7 @@ type cache struct {
 	onEvicted        func(key Key, value interface{})
 	ll               *list.List //最新用到的key在头部，最久未用到的key在尾部
 	cache            map[interface{}]*list.Element
-	toExpire         SkipList //维护过期时间到key的映射
+	toExpire         skl.SkipList //维护过期时间到key的映射
 }
 
 type entry struct {
@@ -67,7 +68,7 @@ func NewCache(maxEntries, gcIntervalSecond int, onEvicted func(key Key, value in
 		onEvicted:        onEvicted,
 		ll:               list.New(),
 		cache:            make(map[interface{}]*list.Element),
-		toExpire:         NewSkipList()}
+		toExpire:         skl.NewSkipList()}
 
 	if gcIntervalSecond > 0 {
 		util.GoFunc(&c.wg, c.gc)
