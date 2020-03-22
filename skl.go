@@ -28,7 +28,7 @@ type skl struct {
 	maxLevel       int
 	length         int
 	probability    float64
-	probTable      []float64
+	probTable      []uint32
 	prevLinksCache []*links
 }
 
@@ -48,10 +48,10 @@ func NewSkipListWithMaxLevel(maxLevel int) SkipList {
 	}
 }
 
-func probabilityTable(probability float64, maxLevel int) (table []float64) {
+func probabilityTable(probability float64, maxLevel int) (table []uint32) {
 	for i := 0; i < maxLevel; i++ {
 		prob := math.Pow(probability, float64(i))
-		table = append(table, prob)
+		table = append(table, uint32(prob*math.MaxUint32))
 	}
 	return table
 }
@@ -80,7 +80,7 @@ func (s *skl) Add(key int64, value interface{}) {
 
 func (s *skl) randLevel() (level int) {
 
-	r := float64(util.FastRand()) / math.MaxUint32
+	r := util.FastRand()
 
 	level = 1
 	for level < s.maxLevel && r < s.probTable[level] {
