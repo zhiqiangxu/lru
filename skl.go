@@ -89,7 +89,7 @@ func (s *skl) randLevel() (level int) {
 	return
 }
 
-// 找到每一层上毗邻于该key对应元素之前的节点
+// 找到每一层上毗邻于该key对应元素之前的links
 func (s *skl) getPrevLinks(key int64) []*links {
 	var prev = &s.links
 	var current *element
@@ -145,4 +145,8 @@ func (s *skl) Head() (key int64, value interface{}, ok bool) {
 		ok = true
 	}
 	return
+}
+
+func (s *skl) NewIterator() SkipListIterator {
+	return &sklIter{s: s}
 }
