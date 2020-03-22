@@ -2,8 +2,8 @@ package lru
 
 import (
 	"math"
-	"math/rand"
-	"time"
+
+	"github.com/zhiqiangxu/util"
 )
 
 const (
@@ -27,7 +27,6 @@ type skl struct {
 	elementNode
 	maxLevel       int
 	length         int
-	randSource     rand.Source
 	probability    float64
 	probTable      []float64
 	prevNodesCache []*elementNode
@@ -43,7 +42,6 @@ func NewSkipListWithMaxLevel(maxLevel int) SkipList {
 	return &skl{
 		elementNode:    elementNode{next: make([]*element, maxLevel)},
 		maxLevel:       maxLevel,
-		randSource:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		probability:    DefaultProbability,
 		probTable:      probabilityTable(DefaultProbability, maxLevel),
 		prevNodesCache: make([]*elementNode, maxLevel),
@@ -81,7 +79,8 @@ func (s *skl) Add(key int64, value interface{}) {
 }
 
 func (s *skl) randLevel() (level int) {
-	r := float64(s.randSource.Int63()) / (1 << 63)
+
+	r := float64(util.FastRand()) / math.MaxUint32
 
 	level = 1
 	for level < s.maxLevel && r < s.probTable[level] {
