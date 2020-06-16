@@ -77,7 +77,7 @@ func NewCache(maxEntries, gcIntervalSecond int, onEvicted func(key Key, value in
 }
 
 func (c *cache) gc() {
-	ticker := time.NewTimer(time.Duration(c.gcIntervalSecond) * time.Second)
+	ticker := time.NewTicker(time.Duration(c.gcIntervalSecond) * time.Second)
 	for {
 		select {
 		case <-ticker.C:
