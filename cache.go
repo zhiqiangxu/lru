@@ -120,6 +120,9 @@ func (c *cache) debug() {
 	if i != c.ll.Len() {
 		panic(fmt.Sprintf("bug, i:%d vs l:%d", i, c.ll.Len()))
 	}
+	if c.ll.Len() != len(c.cache) {
+		panic("bug")
+	}
 }
 
 func (c *cache) addLocked(key Key, value interface{}, expireSeconds int) (new bool) {
@@ -188,6 +191,22 @@ func (c *cache) Get(key Key) (value interface{}, ok bool) {
 	defer c.rwLock.Unlock()
 
 	return c.getLocked(key)
+}
+
+func (c *cache) RGet(key Key) (value interface{}, ok bool) {
+	c.rwLock.RLock()
+	defer c.rwLock.RUnlock()
+
+	if ele, hit := c.cache[key]; hit {
+		timeoutTS := ele.Value.(*entry).timeoutTS
+		if timeoutTS == 0 {
+			return ele.Value.(*entry).value, true
+		}
+		if timeoutTS >= time.Now().Unix() {
+			return ele.Value.(*entry).value, true
+		}
+	}
+	return nil, false
 }
 
 func (c *cache) getLocked(key Key) (value interface{}, ok bool) {

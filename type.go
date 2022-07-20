@@ -11,6 +11,9 @@ type Cache interface {
 	Remove(key Key)
 	Len() int
 
+	// readonly
+	RGet(key Key) (value interface{}, ok bool)
+
 	Txn(funcLocked func(t Txn))
 	CompareAndSet(key Key, funcLocked func(value interface{}, exists bool, t Txn))
 	Range(funcLocked func(key Key, value interface{}, expireTime int64) bool)
