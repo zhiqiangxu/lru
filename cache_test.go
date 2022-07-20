@@ -95,3 +95,17 @@ func TestLRUCache(t *testing.T) {
 	assert.Assert(t, reflect.DeepEqual(keys, resultKeys))
 
 }
+
+func TestCacheExpire(t *testing.T) {
+	c := NewCache(10, 0, nil).(*cache)
+
+	for i := 0; i < 2000; i++ {
+		c.debug()
+		c.Get(i)
+		c.debug()
+		c.Add(i, i, 3)
+		c.debug()
+		c.Get(i)
+		c.debug()
+	}
+}

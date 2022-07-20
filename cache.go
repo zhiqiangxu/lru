@@ -2,6 +2,7 @@ package lru
 
 import (
 	"container/list"
+	"fmt"
 	"sync"
 	"time"
 
@@ -28,7 +29,6 @@ type entry struct {
 }
 
 type txn cache
-type rtxn cache
 
 func (t *txn) Add(key Key, value interface{}, expireSeconds int) (new bool) {
 	new = (*cache)(t).addLocked(key, value, expireSeconds)
@@ -42,20 +42,10 @@ func (t *txn) Get(key Key) (value interface{}, ok bool) {
 
 func (t *txn) Remove(key Key) {
 	(*cache)(t).removeLocked(key)
-	return
 }
 
 func (t *txn) Len() int {
 	return (*cache)(t).lenLocked()
-}
-
-func (rt *rtxn) Get(key Key) (value interface{}, ok bool) {
-	value, ok = (*cache)(rt).getLocked(key)
-	return
-}
-
-func (rt *rtxn) Len() int {
-	return (*cache)(rt).lenLocked()
 }
 
 // NewCache creates a new Cache
@@ -83,7 +73,7 @@ func (c *cache) gc() {
 		case <-ticker.C:
 			nowSecond := time.Now().Unix()
 			c.rwLock.RLock()
-			timeoutTS, expireValues, ok := c.toExpire.Head()
+			timeoutTS, _, ok := c.toExpire.Head()
 			if !ok || timeoutTS > nowSecond {
 				c.rwLock.RUnlock()
 				break
@@ -91,7 +81,7 @@ func (c *cache) gc() {
 			c.rwLock.RUnlock()
 			c.rwLock.Lock()
 			for {
-				timeoutTS, expireValues, ok = c.toExpire.Head()
+				timeoutTS, expireValues, ok := c.toExpire.Head()
 				if !ok || timeoutTS > nowSecond {
 					break
 				}
@@ -119,6 +109,17 @@ func (c *cache) Add(key Key, value interface{}, expireSeconds int) (new bool) {
 
 	return c.addLocked(key, value, expireSeconds)
 
+}
+
+//lint:ignore U1000 Ignore unused function temporarily for debugging
+func (c *cache) debug() {
+	i := 0
+	for e := c.ll.Front(); e != nil; e = e.Next() {
+		i++
+	}
+	if i != c.ll.Len() {
+		panic(fmt.Sprintf("bug, i:%d vs l:%d", i, c.ll.Len()))
+	}
 }
 
 func (c *cache) addLocked(key Key, value interface{}, expireSeconds int) (new bool) {
@@ -167,14 +168,7 @@ func (c *cache) addLocked(key Key, value interface{}, expireSeconds int) (new bo
 	return
 }
 
-func (c *cache) View(funcLocked func(rt RTxn)) {
-	c.rwLock.RLock()
-	defer c.rwLock.RUnlock()
-
-	funcLocked((*rtxn)(c))
-}
-
-func (c *cache) Update(funcLocked func(t Txn)) {
+func (c *cache) Txn(funcLocked func(t Txn)) {
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
@@ -190,8 +184,8 @@ func (c *cache) CompareAndSet(key Key, funcLocked func(value interface{}, exists
 }
 
 func (c *cache) Get(key Key) (value interface{}, ok bool) {
-	c.rwLock.RLock()
-	defer c.rwLock.RUnlock()
+	c.rwLock.Lock()
+	defer c.rwLock.Unlock()
 
 	return c.getLocked(key)
 }
@@ -232,8 +226,8 @@ func (c *cache) Remove(key Key) {
 func (c *cache) Range(funcLocked func(key Key, value interface{}, expireTime int64) bool) {
 	now := time.Now().Unix()
 
-	c.rwLock.RLock()
-	defer c.rwLock.RUnlock()
+	c.rwLock.Lock()
+	defer c.rwLock.Unlock()
 
 	ele := c.ll.Front()
 	for {
@@ -254,8 +248,8 @@ func (c *cache) Range(funcLocked func(key Key, value interface{}, expireTime int
 func (c *cache) Reverse(funcLocked func(key Key, value interface{}, expireTime int64) bool) {
 	now := time.Now().Unix()
 
-	c.rwLock.RLock()
-	defer c.rwLock.RUnlock()
+	c.rwLock.Lock()
+	defer c.rwLock.Unlock()
 
 	ele := c.ll.Back()
 	for {

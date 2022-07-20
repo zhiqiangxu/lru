@@ -11,8 +11,7 @@ type Cache interface {
 	Remove(key Key)
 	Len() int
 
-	View(funcLocked func(rt RTxn))
-	Update(funcLocked func(t Txn))
+	Txn(funcLocked func(t Txn))
 	CompareAndSet(key Key, funcLocked func(value interface{}, exists bool, t Txn))
 	Range(funcLocked func(key Key, value interface{}, expireTime int64) bool)
 	Reverse(funcLocked func(key Key, value interface{}, expireTime int64) bool)
@@ -25,11 +24,5 @@ type Txn interface {
 	Add(key Key, value interface{}, expireSeconds int) (new bool)
 	Get(key Key) (value interface{}, ok bool)
 	Remove(key Key)
-	Len() int
-}
-
-// RTxn for read only transaction
-type RTxn interface {
-	Get(key Key) (value interface{}, ok bool)
 	Len() int
 }
