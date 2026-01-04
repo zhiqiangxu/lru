@@ -11,7 +11,7 @@ import (
 func TestLRUCache(t *testing.T) {
 
 	// without active gc
-	c := NewCache(100, 0, nil)
+	c := NewCache(100)
 	ret := c.Add("k1", "v1", 0)
 	assert.Assert(t, c.Len() == 1 && ret)
 	ret = c.Add("k1", "v1", 0)
@@ -27,7 +27,7 @@ func TestLRUCache(t *testing.T) {
 	assert.Assert(t, ret)
 
 	// with active gc every second
-	c = NewCache(100, 1, nil)
+	c = NewCache(100, WithGCInterval(1))
 	c.Add("k1", "v1", 0)
 	assert.Assert(t, c.Len() == 1)
 	c.Add("k2", "v2", 1)
@@ -38,7 +38,7 @@ func TestLRUCache(t *testing.T) {
 	c.Close()
 
 	// test cap
-	c = NewCache(2, 1, nil)
+	c = NewCache(2, WithGCInterval(1))
 	c.Add("k1", "v1", 0)
 	assert.Assert(t, c.Len() == 1)
 	c.Add("k2", "v2", 0)
@@ -60,7 +60,7 @@ func TestLRUCache(t *testing.T) {
 
 	// test Range
 	m := map[interface{}]interface{}{1: 2, 3: 4, 5: 6}
-	c = NewCache(20, 1, nil)
+	c = NewCache(20, WithGCInterval(1))
 	var keys []Key
 	for k, v := range m {
 		keys = append(keys, k)
@@ -97,7 +97,7 @@ func TestLRUCache(t *testing.T) {
 }
 
 func TestCacheExpire(t *testing.T) {
-	c := NewCache(10, 0, nil).(*cache)
+	c := NewCache(10).(*cache)
 
 	for i := 0; i < 2000; i++ {
 		c.debug()

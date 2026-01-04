@@ -20,6 +20,57 @@ type cache struct {
 	ll               *list.List //最新用到的key在头部，最久未用到的key在尾部
 	cache            map[interface{}]*list.Element
 	toExpire         skl.SkipList //维护过期时间到key的映射
+	noLock           bool
+}
+
+// Option is a functional option for configuring the cache
+type Option func(*cache)
+
+// WithNoLock disables internal locking so that locks can be managed externally
+func WithNoLock() Option {
+	return func(c *cache) {
+		c.noLock = true
+	}
+}
+
+// WithGCInterval sets the garbage collection interval in seconds
+// If not set or set to 0, no background GC goroutine will run
+func WithGCInterval(seconds int) Option {
+	return func(c *cache) {
+		c.gcIntervalSecond = seconds
+	}
+}
+
+// WithOnEvicted sets the callback function called when an entry is evicted
+// Note: lock is held when onEvicted is called
+func WithOnEvicted(fn func(key Key, value interface{})) Option {
+	return func(c *cache) {
+		c.onEvicted = fn
+	}
+}
+
+func (c *cache) lock() {
+	if !c.noLock {
+		c.rwLock.Lock()
+	}
+}
+
+func (c *cache) unlock() {
+	if !c.noLock {
+		c.rwLock.Unlock()
+	}
+}
+
+func (c *cache) rlock() {
+	if !c.noLock {
+		c.rwLock.RLock()
+	}
+}
+
+func (c *cache) runlock() {
+	if !c.noLock {
+		c.rwLock.RUnlock()
+	}
 }
 
 type entry struct {
@@ -49,18 +100,23 @@ func (t *txn) Len() int {
 }
 
 // NewCache creates a new Cache
-// lock is holded when onEvicted is called
-func NewCache(maxEntries, gcIntervalSecond int, onEvicted func(key Key, value interface{})) Cache {
+func NewCache(maxEntries int, opts ...Option) Cache {
 	c := &cache{
-		maxEntries:       maxEntries,
-		gcIntervalSecond: gcIntervalSecond,
-		closeCh:          make(chan struct{}),
-		onEvicted:        onEvicted,
-		ll:               list.New(),
-		cache:            make(map[interface{}]*list.Element),
-		toExpire:         skl.NewSkipList()}
+		maxEntries: maxEntries,
+		closeCh:    make(chan struct{}),
+		ll:         list.New(),
+		cache:      make(map[interface{}]*list.Element),
+		toExpire:   skl.NewSkipList()}
 
-	if gcIntervalSecond > 0 {
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	if c.noLock && c.gcIntervalSecond > 0 {
+		panic("noLock and gcIntervalSecond cannot be both enabled")
+	}
+
+	if c.gcIntervalSecond > 0 {
 		util.GoFunc(&c.wg, c.gc)
 	}
 	return c
@@ -72,14 +128,14 @@ func (c *cache) gc() {
 		select {
 		case <-ticker.C:
 			nowSecond := time.Now().Unix()
-			c.rwLock.RLock()
+			c.rlock()
 			timeoutTS, _, ok := c.toExpire.Head()
 			if !ok || timeoutTS > nowSecond {
-				c.rwLock.RUnlock()
+				c.runlock()
 				break
 			}
-			c.rwLock.RUnlock()
-			c.rwLock.Lock()
+			c.runlock()
+			c.lock()
 			for {
 				timeoutTS, expireValues, ok := c.toExpire.Head()
 				if !ok || timeoutTS > nowSecond {
@@ -89,13 +145,13 @@ func (c *cache) gc() {
 					if ele, hit := c.cache[key]; hit {
 						c.removeElement(ele)
 					} else {
-						c.rwLock.Unlock()
+						c.unlock()
 						panic("bug in cache3")
 					}
 
 				}
 			}
-			c.rwLock.Unlock()
+			c.unlock()
 		case <-c.closeCh:
 			return
 		}
@@ -104,8 +160,8 @@ func (c *cache) gc() {
 
 func (c *cache) Add(key Key, value interface{}, expireSeconds int) (new bool) {
 
-	c.rwLock.Lock()
-	defer c.rwLock.Unlock()
+	c.lock()
+	defer c.unlock()
 
 	return c.addLocked(key, value, expireSeconds)
 
@@ -172,30 +228,30 @@ func (c *cache) addLocked(key Key, value interface{}, expireSeconds int) (new bo
 }
 
 func (c *cache) Txn(funcLocked func(t Txn)) {
-	c.rwLock.Lock()
-	defer c.rwLock.Unlock()
+	c.lock()
+	defer c.unlock()
 
 	funcLocked((*txn)(c))
 }
 
 func (c *cache) CompareAndSet(key Key, funcLocked func(value interface{}, exists bool, t Txn)) {
-	c.rwLock.Lock()
-	defer c.rwLock.Unlock()
+	c.lock()
+	defer c.unlock()
 
 	value, ok := c.getLocked(key)
 	funcLocked(value, ok, (*txn)(c))
 }
 
 func (c *cache) Get(key Key) (value interface{}, ok bool) {
-	c.rwLock.Lock()
-	defer c.rwLock.Unlock()
+	c.lock()
+	defer c.unlock()
 
 	return c.getLocked(key)
 }
 
 func (c *cache) RGet(key Key) (value interface{}, ok bool) {
-	c.rwLock.RLock()
-	defer c.rwLock.RUnlock()
+	c.rlock()
+	defer c.runlock()
 
 	if ele, hit := c.cache[key]; hit {
 		timeoutTS := ele.Value.(*entry).timeoutTS
@@ -225,8 +281,8 @@ func (c *cache) getLocked(key Key) (value interface{}, ok bool) {
 }
 
 func (c *cache) Len() int {
-	c.rwLock.RLock()
-	defer c.rwLock.RUnlock()
+	c.rlock()
+	defer c.runlock()
 
 	return c.ll.Len()
 }
@@ -236,8 +292,8 @@ func (c *cache) lenLocked() int {
 }
 
 func (c *cache) Remove(key Key) {
-	c.rwLock.Lock()
-	defer c.rwLock.Unlock()
+	c.lock()
+	defer c.unlock()
 
 	c.removeLocked(key)
 }
@@ -245,8 +301,8 @@ func (c *cache) Remove(key Key) {
 func (c *cache) Range(funcLocked func(key Key, value interface{}, expireTime int64) bool) {
 	now := time.Now().Unix()
 
-	c.rwLock.Lock()
-	defer c.rwLock.Unlock()
+	c.lock()
+	defer c.unlock()
 
 	ele := c.ll.Front()
 	for {
@@ -267,8 +323,8 @@ func (c *cache) Range(funcLocked func(key Key, value interface{}, expireTime int
 func (c *cache) Reverse(funcLocked func(key Key, value interface{}, expireTime int64) bool) {
 	now := time.Now().Unix()
 
-	c.rwLock.Lock()
-	defer c.rwLock.Unlock()
+	c.lock()
+	defer c.unlock()
 
 	ele := c.ll.Back()
 	for {
