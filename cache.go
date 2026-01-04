@@ -122,35 +122,36 @@ func NewCache(maxEntries int, opts ...Option) Cache {
 	return c
 }
 
+// GCLocked performs one round of garbage collection to remove expired entries.
+// Caller must hold the lock.
+func (c *cache) GCLocked() {
+	c.gcLocked()
+}
+
+func (c *cache) gcLocked() {
+	nowSecond := time.Now().Unix()
+	for {
+		timeoutTS, expireValues, ok := c.toExpire.Head()
+		if !ok || timeoutTS > nowSecond {
+			break
+		}
+		for key := range expireValues.(map[interface{}]struct{}) {
+			if ele, hit := c.cache[key]; hit {
+				c.removeElement(ele)
+			} else {
+				panic("bug in cache3")
+			}
+		}
+	}
+}
+
 func (c *cache) gc() {
 	ticker := time.NewTicker(time.Duration(c.gcIntervalSecond) * time.Second)
 	for {
 		select {
 		case <-ticker.C:
-			nowSecond := time.Now().Unix()
-			c.rlock()
-			timeoutTS, _, ok := c.toExpire.Head()
-			if !ok || timeoutTS > nowSecond {
-				c.runlock()
-				break
-			}
-			c.runlock()
 			c.lock()
-			for {
-				timeoutTS, expireValues, ok := c.toExpire.Head()
-				if !ok || timeoutTS > nowSecond {
-					break
-				}
-				for key := range expireValues.(map[interface{}]struct{}) {
-					if ele, hit := c.cache[key]; hit {
-						c.removeElement(ele)
-					} else {
-						c.unlock()
-						panic("bug in cache3")
-					}
-
-				}
-			}
+			c.gcLocked()
 			c.unlock()
 		case <-c.closeCh:
 			return

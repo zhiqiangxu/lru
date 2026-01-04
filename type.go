@@ -19,6 +19,10 @@ type Cache interface {
 	Range(funcLocked func(key Key, value interface{}, expireTime int64) bool)
 	Reverse(funcLocked func(key Key, value interface{}, expireTime int64) bool)
 
+	// GCLocked performs one round of garbage collection to remove expired entries.
+	// When noLock is enabled, caller must hold the external lock.
+	GCLocked()
+
 	Close()
 }
 
